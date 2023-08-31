@@ -100,6 +100,10 @@ namespace Frida {
 
 		public async uint inject_library_fd (uint pid, UnixInputStream library_so, string entrypoint, string data,
 				AgentFeatures features, Cancellable? cancellable) throws Error, IOError {
+#if ANDROID
+			if(!verifySELinux(pid))
+			    throw new Error.INVALID_ARGUMENT ("Unable to verify SELinux pid %u : %s", pid, strerror (errno));
+#endif
 			uint id = next_injectee_id++;
 			yield helper.inject_library (pid, library_so, entrypoint, data, features, id, cancellable);
 
@@ -276,4 +280,8 @@ namespace Frida {
 		SELinux.setfilecon (path, "u:object_r:frida_file:s0");
 #endif
 	}
+
+#if ANDROID
+	public extern bool verifySELinux (uint pid);
+#endif
 }

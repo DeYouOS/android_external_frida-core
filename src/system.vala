@@ -98,7 +98,20 @@ namespace Frida {
 
 			var source = new IdleSource ();
 			source.set_callback (() => {
-				request.complete (processes);
+				var result = new Gee.ArrayList<HostProcessInfo?> ();
+				foreach (HostProcessInfo info in processes) {
+					var name = info.name;
+				    if (name == "zygote" || name == "zygote64" || name == "usap32" || name == "usap64" || name == "system_server" || name == "logcat")
+					    continue;
+
+					result.add (info);
+				}
+				var new_processes = new HostProcessInfo[result.size];
+				int index = 0;
+				foreach (HostProcessInfo info in result)
+				    new_processes[index++] = info;
+
+				request.complete (new_processes);
 				return false;
 			});
 			source.attach (main_context);

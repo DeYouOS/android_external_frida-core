@@ -5,6 +5,14 @@
 
 #ifdef HAVE_ANDROID
 # include <jni.h>
+#include <selinux/selinux.h>
+#include <android/log.h>
+#define LOG_TAG "frida_agent"
+#define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#define ALOGW(...) __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__)
+#define ALOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+#define ALOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
+
 # if __ANDROID_API__ < __ANDROID_API_L__
 #  include <signal.h>
 # endif
@@ -75,6 +83,30 @@ JNI_OnLoad (JavaVM * vm, void * reserved)
   frida_agent_main (state->agent_parameters, &state->unload_policy, state->injector_state);
 
   return JNI_VERSION_1_6;
+}
+
+gboolean _frida_agent_environment_enable(void) {
+  char *backup_fromcon = NULL;
+  if(getcon(&backup_fromcon) == 0) {
+    if(strstr(backup_fromcon, "untrusted_app") != NULL ||
+      strstr(backup_fromcon, "u:r:app_zygote") != NULL ||
+      strcmp(backup_fromcon, "u:r:zygote:s0") == 0 ||
+      // strcmp(backup_fromcon, "u:r:isolated_app:s0") != NULL || 
+      strcmp(backup_fromcon, "u:r:system_server:s0") == 0)
+        return true;
+
+  } else {
+    ALOGE("backup_fromcon: null");
+  }
+  return false;
+}
+
+void frida_agent_environment_error (const gchar* fmt, ...) {
+
+  va_list ap;
+  va_start(ap, fmt);
+  __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, fmt, ap);
+  va_end(ap);
 }
 
 #endif

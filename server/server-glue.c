@@ -29,6 +29,8 @@ void CFLog (CFLogLevel level, CFStringRef format, ...);
 
 #elif defined (HAVE_ANDROID)
 # include <android/log.h>
+# include <sys/system_properties.h>
+#define LOG_TAG "frida_server"
 #else
 # include <stdio.h>
 #endif
@@ -178,3 +180,19 @@ frida_server_on_log_message (const gchar * log_domain, GLogLevelFlags log_level,
 #endif
 }
 
+#ifdef HAVE_ANDROID
+gchar* frida_server_environment_get_listen_address (void) {
+  gchar listen_address[PROP_VALUE_MAX];
+  if (__system_property_get("sys.frida.listen", listen_address) && strlen(listen_address) > 0) {
+    return g_strndup (listen_address, strlen(listen_address));
+  }
+  return NULL;
+}
+void frida_server_environment_error (const gchar* fmt, ...) {
+
+  va_list ap;
+  va_start(ap, fmt);
+  __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, fmt, ap);
+  va_end(ap);
+}
+#endif

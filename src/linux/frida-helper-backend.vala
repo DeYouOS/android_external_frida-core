@@ -558,7 +558,7 @@ namespace Frida {
 			case Gum.CpuType.IA32:
 			case Gum.CpuType.ARM:
 			case Gum.CpuType.MIPS:
-				return "32";
+				return "";
 
 			case Gum.CpuType.AMD64:
 			case Gum.CpuType.ARM64:

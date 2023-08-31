@@ -1,6 +1,6 @@
 let ApplicationInfo, Base64OutputStream, Bitmap, ByteArrayOutputStream, Canvas, ComponentName, ContextWrapper, Intent, ResolveInfo,
   RunningAppProcessInfo, RunningTaskInfo, UserHandle;
-let ACTION_MAIN, ARGB_8888, CATEGORY_HOME, CATEGORY_LAUNCHER, GET_ACTIVITIES, FLAG_ACTIVITY_NEW_TASK, FLAG_DEBUGGABLE, NO_WRAP, PNG;
+let ACTION_MAIN, ARGB_8888, CATEGORY_HOME, CATEGORY_LAUNCHER, GET_ACTIVITIES, FLAG_ACTIVITY_NEW_TASK, FLAG_DEBUGGABLE, FLAG_SYSTEM, NO_WRAP, PNG;
 let context, packageManager, activityManager, loadAppLabel, loadResolveInfoLabel;
 
 let multiUserSupported;
@@ -35,6 +35,7 @@ function init() {
   GET_ACTIVITIES = PackageManager.GET_ACTIVITIES.value;
   FLAG_ACTIVITY_NEW_TASK = Intent.FLAG_ACTIVITY_NEW_TASK.value;
   FLAG_DEBUGGABLE = ApplicationInfo.FLAG_DEBUGGABLE.value;
+  FLAG_SYSTEM = ApplicationInfo.FLAG_SYSTEM.value;
   NO_WRAP = Base64.NO_WRAP.value;
   PNG = BitmapCompressFormat.PNG.value;
 
@@ -194,6 +195,7 @@ rpc.exports = {
       }
 
       let appInstalled = false;
+      let systemApp = false;
       const apps = (uid !== 0)
           ? pm.getInstalledApplicationsAsUser(0, uid)
           : pm.getInstalledApplications(0);
@@ -202,9 +204,15 @@ rpc.exports = {
         const appInfo = Java.cast(apps.get(i), ApplicationInfo);
         if (appInfo.packageName.value === pkgName) {
           appInstalled = true;
+          if((appInfo.flags.value & FLAG_SYSTEM) != 0)
+            systemApp = true;
+
           break;
         }
       }
+      if (systemApp)
+        throw new Error("Unable to not systemApp with identifier '" + pkgName + "'");
+
       if (!appInstalled)
         throw new Error("Unable to find application with identifier '" + pkgName + "'");
 
@@ -310,7 +318,11 @@ function getLauncherApplications() {
   const n = activities.size();
   for (let i = 0; i !== n; i++) {
     const resolveInfo = Java.cast(activities.get(i), ResolveInfo);
-    result.push(resolveInfo.activityInfo.value.applicationInfo.value);
+    const applicationInfo = Java.cast(resolveInfo.activityInfo.value.applicationInfo.value, ApplicationInfo);
+    if((applicationInfo.flags.value & FLAG_SYSTEM) != 0)
+      continue;
+
+    result.push(applicationInfo);
   }
   return result;
 }

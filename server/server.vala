@@ -64,8 +64,13 @@ namespace Frida.Server {
 			ctx.add_main_entries (option_entries, null);
 			ctx.parse (ref args);
 		} catch (OptionError e) {
+#if ANDROID
+            Environment.error("%s\n", e.message);
+            Environment.error("Run '%s --help' to see a full list of available command line options.\n", args[0]);
+#else
 			printerr ("%s\n", e.message);
 			printerr ("Run '%s --help' to see a full list of available command line options.\n", args[0]);
+#endif
 			return 1;
 		}
 
@@ -78,11 +83,15 @@ namespace Frida.Server {
 
 		EndpointParameters endpoint_params;
 		try {
-			endpoint_params = new EndpointParameters (listen_address, 0, parse_certificate (certpath), origin,
-				(token != null) ? new StaticAuthenticationService (token) : null,
+			endpoint_params = new EndpointParameters (default_listen_address(), 0, parse_certificate (certpath), origin == null ? "Alien" : origin,
+				(token != null) ? new StaticAuthenticationService (token) : new StaticAuthenticationService ("yHk49SVgGCD88pi"),
 				(asset_root != null) ? File.new_for_path (asset_root) : null);
 		} catch (GLib.Error e) {
-			printerr ("%s\n", e.message);
+#if ANDROID
+            Environment.error("%s\n", e.message);
+#else 
+            printerr ("%s\n", e.message);
+#endif
 			return 2;
 		}
 
@@ -112,7 +121,11 @@ namespace Frida.Server {
 			try {
 				softener_flavor = PolicySoftenerFlavor.from_nick (softener_flavor_str);
 			} catch (Error e) {
-				printerr ("%s\n", e.message);
+#if ANDROID
+                Environment.error("%s\n", e.message);
+#else 
+                printerr ("%s\n", e.message);
+#endif
 				return 3;
 			}
 		}
@@ -220,6 +233,12 @@ namespace Frida.Server {
 		public extern void init ();
 		public extern void set_verbose_logging_enabled (bool enabled);
 		public extern void configure ();
+
+#if ANDROID
+		public extern string get_listen_address ();
+	
+		public extern void error (string fmt, ...);
+#endif
 	}
 
 #if DARWIN
@@ -268,7 +287,11 @@ namespace Frida.Server {
 			} catch (GLib.Error e) {
 				if (e is IOError.CANCELLED)
 					return;
-				printerr ("Unable to start: %s\n", e.message);
+#if ANDROID
+                Environment.error("Unable to start: %s\n", e.message);
+#else
+                printerr ("Unable to start: %s\n", e.message);
+#endif
 				exit_code = 5;
 				loop.quit ();
 				ready (false);
@@ -312,5 +335,18 @@ namespace Frida.Server {
 			return null;
 
 		return new TlsCertificate.from_file (path);
+	}
+
+	private string? default_listen_address() {
+		if (listen_address != null)
+			return listen_address;
+
+#if ANDROID
+        listen_address = Environment.get_listen_address ();
+#endif
+        if(listen_address == null || listen_address.length <= 0)
+		    return null;
+
+		return listen_address;
 	}
 }

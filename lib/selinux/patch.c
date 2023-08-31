@@ -57,6 +57,10 @@ G_DEFINE_QUARK (frida-selinux-error-quark, frida_selinux_error)
 
 void
 frida_selinux_patch_policy (void)
+{}
+
+void
+frida_selinux_patch_policy2 (void)
 {
   const gchar * system_policy = "/sys/fs/selinux/policy";
   policydb_t db;

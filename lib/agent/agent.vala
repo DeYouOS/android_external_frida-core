@@ -161,6 +161,9 @@ namespace Frida.Agent {
 				try {
 					shared_instance.run ((owned) fdt_padder);
 				} catch (Error e) {
+#if ANDROID
+					Environment.error("Unable to start agent: %s", e.message);
+#endif
 					GLib.info ("Unable to start agent: %s", e.message);
 				}
 
@@ -321,6 +324,9 @@ namespace Frida.Agent {
 			try {
 				yield setup_connection_with_transport_uri (transport_uri);
 			} catch (Error e) {
+#if ANDROID
+				Environment.error("%s", e.message);
+#endif
 				start_error = e;
 				main_loop.quit ();
 				return;
@@ -400,6 +406,7 @@ namespace Frida.Agent {
 						out fork_parent_injectee_id, out fork_child_injectee_id, out fork_child_socket);
 				} catch (GLib.Error e) {
 #if ANDROID
+                    Environment.error("Oops, SELinux rule probably missing for your system. Symptom: %s", e.message);
 					error ("Oops, SELinux rule probably missing for your system. Symptom: %s", e.message);
 #else
 					error ("%s", e.message);
@@ -432,6 +439,9 @@ namespace Frida.Agent {
 				try {
 					acquire_child_gating ();
 				} catch (Error e) {
+#if ANDROID
+					Environment.error("%s", e.message);
+#endif
 					assert_not_reached ();
 				}
 
@@ -509,15 +519,23 @@ namespace Frida.Agent {
 			} else if (actor == CHILD) {
 				yield flush_all_sessions ();
 
-				if (fork_child_socket != null) {
-					var stream = SocketConnection.factory_create_connection (fork_child_socket);
-					try {
-						yield setup_connection_with_stream (stream);
-					} catch (Error e) {
-						assert_not_reached ();
+#if ANDROID
+		        if(!Environment._enable()) { // 清理so
+					unload.begin (null);
+				} else {
+					if (fork_child_socket != null) {
+						var stream = SocketConnection.factory_create_connection (fork_child_socket);
+						try {
+							yield setup_connection_with_stream (stream);
+						} catch (Error e) {
+#if ANDROID
+							Environment.error("%s", e.message);
+#endif
+							assert_not_reached ();
+						}
 					}
 				}
-
+#endif
 				pid = fork_child_pid;
 				injectee_id = fork_child_injectee_id;
 			} else {
@@ -596,6 +614,9 @@ namespace Frida.Agent {
 					specialized_child_id = yield controller.prepare_to_specialize (get_process_id (), identifier, null,
 						out specialized_injectee_id, out specialized_pipe_address);
 				} catch (GLib.Error e) {
+#if ANDROID
+					Environment.error("%s", e.message);
+#endif
 					error ("%s", e.message);
 				}
 			}
@@ -636,6 +657,9 @@ namespace Frida.Agent {
 					yield setup_connection_with_transport_uri (specialized_pipe_address);
 					yield controller.recreate_agent_thread (get_process_id (), specialized_injectee_id, null);
 				} catch (GLib.Error e) {
+#if ANDROID
+					Environment.error("%s", e.message);
+#endif
 					assert_not_reached ();
 				}
 			} else {
@@ -768,6 +792,9 @@ namespace Frida.Agent {
 				sink = yield connection.get_proxy (null, ObjectPath.for_agent_message_sink (id), DO_NOT_LOAD_PROPERTIES,
 					cancellable);
 			} catch (IOError e) {
+#if ANDROID
+				Environment.error("%s", e.message);
+#endif
 				throw_dbus_error (e);
 			}
 
@@ -786,6 +813,9 @@ namespace Frida.Agent {
 				try {
 					yield emulated_provider.open (id, emulated_opts._serialize (), cancellable);
 				} catch (GLib.Error e) {
+#if ANDROID
+					Environment.error("%s", e.message);
+#endif
 					throw_dbus_error (e);
 				}
 
@@ -801,6 +831,9 @@ namespace Frida.Agent {
 					session = yield emulated_connection.get_proxy (null, session_path, DO_NOT_LOAD_PROPERTIES,
 						cancellable);
 				} catch (IOError e) {
+#if ANDROID
+					Environment.error("%s", e.message);
+#endif
 					throw_dbus_error (e);
 				}
 
@@ -808,6 +841,9 @@ namespace Frida.Agent {
 					emulated_session.session_registration_id = connection.register_object (session_path, session);
 					emulated_session.sink_registration_id = emulated_connection.register_object (sink_path, sink);
 				} catch (IOError e) {
+#if ANDROID
+					Environment.error("%s", e.message);
+#endif
 					assert_not_reached ();
 				}
 
@@ -932,6 +968,9 @@ namespace Frida.Agent {
 				try {
 					yield emulated_provider.migrate (id, to_socket, cancellable);
 				} catch (GLib.Error e) {
+#if ANDROID
+					Environment.error("%s", e.message);
+#endif
 					throw_dbus_error (e);
 				}
 				return;
@@ -951,6 +990,9 @@ namespace Frida.Agent {
 				sink = yield connection.get_proxy (null, ObjectPath.for_agent_message_sink (id), DO_NOT_LOAD_PROPERTIES,
 					cancellable);
 			} catch (GLib.Error e) {
+#if ANDROID
+				Environment.error("%s", e.message);
+#endif
 				throw new Error.TRANSPORT ("%s", e.message);
 			}
 			dc.connection = connection;
@@ -1155,6 +1197,9 @@ namespace Frida.Agent {
 					throw new Error.INVALID_ARGUMENT ("Invalid transport URI: %s", transport_uri);
 				}
 			} catch (GLib.Error e) {
+#if ANDROID
+				Environment.error("%s", e.message);
+#endif
 				if (e is Error)
 					throw (Error) e;
 				throw new Error.TRANSPORT ("%s", e.message);
@@ -1176,6 +1221,9 @@ namespace Frida.Agent {
 
 				connection.start_message_processing ();
 			} catch (GLib.Error e) {
+#if ANDROID
+				Environment.error("%s", e.message);
+#endif
 				throw new Error.TRANSPORT ("%s", e.message);
 			}
 		}
@@ -1337,6 +1385,9 @@ namespace Frida.Agent {
 				} catch (Error e) {
 					throw e;
 				} catch (IOError e) {
+#if ANDROID
+					Environment.error("%s", e.message);
+#endif
 					assert (e is IOError.CANCELLED);
 					cancellable.set_error_if_cancelled ();
 				}
@@ -1429,6 +1480,9 @@ namespace Frida.Agent {
 				else
 					e = new Error.TRANSPORT ("%s", raw_error.message);
 
+#if ANDROID
+				Environment.error("%s", raw_error.message);
+#endif
 				request.reject (e);
 				throw_api_error (e);
 			}
@@ -1655,6 +1709,11 @@ namespace Frida.Agent {
 	namespace Environment {
 		public extern void _init ();
 		public extern void _deinit ();
+
+#if ANDROID
+		public extern bool _enable ();
+		public extern void error (string fmt, ...);
+#endif
 	}
 
 	private Mutex gc_mutex;

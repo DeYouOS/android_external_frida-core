@@ -177,8 +177,8 @@ endif
 if get_option('assets') == 'embedded'
   vala_flags += '--define=HAVE_EMBEDDED_ASSETS'
 else
-  cdata.set_quoted('FRIDA_HELPER_PATH', asset_path_template / helper_name)
-  cdata.set_quoted('FRIDA_AGENT_PATH', asset_path_template / agent_name)
+  cdata.set_quoted('FRIDA_HELPER_PATH', asset_path_template / 'bin' / helper_name + '-<arch>')
+  cdata.set_quoted('FRIDA_AGENT_PATH', asset_path_template / 'lib<arch>' / agent_name)
 endif
 
 cdata.set('HAVE_' + host_os_family.to_upper(), 1)

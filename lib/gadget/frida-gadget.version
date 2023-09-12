@@ -1,4 +1,7 @@
 {
+  global:
+    frida_gadget_main;
+
   local:
     *;
 };

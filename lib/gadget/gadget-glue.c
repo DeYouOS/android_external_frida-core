@@ -13,6 +13,15 @@
 # include <gioopenssl.h>
 #endif
 
+#ifdef HAVE_ANDROID
+#include <android/log.h>
+#define LOG_TAG "frida_gadget"
+#define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#define ALOGW(...) __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__)
+#define ALOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+#define ALOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
+#endif
+
 #ifdef HAVE_DARWIN
 static void frida_parse_apple_parameters (const gchar * apple[], gboolean * found_range, GumMemoryRange * range, gchar ** config_data);
 #endif
@@ -70,13 +79,58 @@ frida_on_load (int argc, const char * argv[], const char * envp[], const char * 
 __attribute__ ((constructor)) static void
 frida_on_load (void)
 {
-  frida_gadget_load (NULL, NULL, NULL);
+  ALOGD("frida_on_load");
+  // frida_gadget_load (NULL, NULL, NULL);
 }
 
 __attribute__ ((destructor)) static void
 frida_on_unload (void)
 {
   frida_gadget_unload ();
+}
+
+#endif
+
+#ifdef HAVE_ANDROID
+
+void frida_agent_environment_log_verbose (const gchar* fmt, ...) {
+
+  va_list ap;
+  va_start(ap, fmt);
+  __android_log_vprint(ANDROID_LOG_VERBOSE, LOG_TAG, fmt, ap);
+  va_end(ap);
+}
+
+void frida_agent_environment_log_debug (const gchar* fmt, ...) {
+
+  va_list ap;
+  va_start(ap, fmt);
+  __android_log_vprint(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ap);
+  va_end(ap);
+}
+
+void frida_agent_environment_log_info (const gchar* fmt, ...) {
+
+  va_list ap;
+  va_start(ap, fmt);
+  __android_log_vprint(ANDROID_LOG_INFO, LOG_TAG, fmt, ap);
+  va_end(ap);
+}
+
+void frida_agent_environment_log_warn (const gchar* fmt, ...) {
+
+  va_list ap;
+  va_start(ap, fmt);
+  __android_log_vprint(ANDROID_LOG_WARN, LOG_TAG, fmt, ap);
+  va_end(ap);
+}
+
+void frida_agent_environment_log_error (const gchar* fmt, ...) {
+
+  va_list ap;
+  va_start(ap, fmt);
+  __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, fmt, ap);
+  va_end(ap);
 }
 
 #endif
@@ -225,13 +279,21 @@ stop_worker_loop (gpointer data)
 void
 frida_gadget_log_info (const gchar * message)
 {
+#ifdef HAVE_ANDROID
+  ALOGI ("%s", message);
+#else
   g_info ("%s", message);
+#endif
 }
 
 void
 frida_gadget_log_warning (const gchar * message)
 {
+#ifdef HAVE_ANDROID
+  ALOGW ("%s", message);
+#else
   g_warning ("%s", message);
+#endif
 }
 
 #ifdef HAVE_DARWIN

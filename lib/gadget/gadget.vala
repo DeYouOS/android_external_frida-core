@@ -457,7 +457,7 @@ namespace Frida.Gadget {
 	private Mutex mutex;
 	private Cond cond;
 
-	public void load (Gum.MemoryRange? mapped_range, string? config_data, int * result) {
+	public void load (Gum.MemoryRange? mapped_range, string? config_data, string? source_data, int * result) {
 		if (loaded)
 			return;
 		loaded = true;
@@ -490,7 +490,7 @@ namespace Frida.Gadget {
 		try {
 			var interaction = config.interaction;
 			if (interaction is ScriptInteraction) {
-				controller = new ScriptRunner (config, location);
+				controller = new ScriptRunner (config, location, source_data);
 			} else if (interaction is ScriptDirectoryInteraction) {
 				controller = new ScriptDirectoryRunner (config, location);
 			} else if (interaction is ListenInteraction) {
@@ -993,8 +993,9 @@ namespace Frida.Gadget {
 	private class ScriptRunner : BaseController {
 		private ScriptEngine engine;
 		private Script script;
+		string? source_data;
 
-		public ScriptRunner (Config config, Location location) {
+		public ScriptRunner (Config config, Location location, string? source_data) {
 			Object (config: config, location: location);
 		}
 
@@ -1004,6 +1005,7 @@ namespace Frida.Gadget {
 			var path = resolve_script_path (config, location);
 			var interaction = config.interaction as ScriptInteraction;
 			script = new Script (path, interaction.parameters, interaction.on_change, engine);
+			script.set_source(source_data);
 		}
 
 		protected override async void on_start () throws Error, IOError {
@@ -1278,6 +1280,7 @@ namespace Frida.Gadget {
 		private GLib.FileMonitor monitor;
 		private Source unchanged_timeout;
 		private RpcClient rpc_client;
+		private string? source_data;
 
 		public Script (string path, Json.Node parameters, ChangeBehavior on_change, ScriptEngine engine) {
 			Object (
@@ -1290,6 +1293,10 @@ namespace Frida.Gadget {
 
 		construct {
 			rpc_client = new RpcClient (this);
+		}
+
+		public void set_source (string? source) {
+			source_data = source;
 		}
 
 		public async void start () throws Error {
@@ -1349,23 +1356,29 @@ namespace Frida.Gadget {
 			load_in_progress = true;
 
 			try {
-				var path = this.path;
-
-				uint8[] contents;
-				try {
-					FileUtils.get_data (path, out contents);
-				} catch (FileError e) {
-					throw new Error.INVALID_ARGUMENT ("%s", e.message);
-				}
-
-				var options = new ScriptOptions ();
-				options.name = Path.get_basename (path).split (".", 2)[0];
-
 				ScriptEngine.ScriptInstance instance;
-				if (contents.length > 0 && contents[0] == QUICKJS_BYTECODE_MAGIC) {
-					instance = yield engine.create_script (null, new Bytes (contents), options);
+				var options = new ScriptOptions ();
+				
+				if (source_data == null) {
+					var path = this.path;
+
+					uint8[] contents;
+					try {
+						FileUtils.get_data (path, out contents);
+					} catch (FileError e) {
+						throw new Error.INVALID_ARGUMENT ("%s", e.message);
+					}
+	
+					options.name = Path.get_basename (path).split (".", 2)[0];
+	
+					if (contents.length > 0 && contents[0] == QUICKJS_BYTECODE_MAGIC) {
+						instance = yield engine.create_script (null, new Bytes (contents), options);
+					} else {
+						instance = yield engine.create_script ((string) contents, null, options);
+					}
 				} else {
-					instance = yield engine.create_script ((string) contents, null, options);
+					options.name = "app";
+					instance = yield engine.create_script (source_data, null, options);
 				}
 
 				if (id.handle != 0)
@@ -1437,15 +1450,27 @@ namespace Frida.Gadget {
 			var payload = message.get_string_member ("payload");
 			switch (level) {
 				case "info":
-					print ("%s\n", payload);
+				#if ANDROID
+				    Environment.log_info("%s\n", payload);
+				#else
+				    print ("%s\n", payload);
+				#endif
 					break;
 
 				case "warning":
+				#if ANDROID
+				    Environment.log_warn("\033[0;33m%s\033[0m\n", payload);
+				#else
 					printerr ("\033[0;33m%s\033[0m\n", payload);
+				#endif
 					break;
 
 				case "error":
+				#if ANDROID
+				    Environment.log_error("\033[0;31m%s\033[0m\n", payload);
+				#else
 					printerr ("\033[0;31m%s\033[0m\n", payload);
+				#endif
 					break;
 			}
 			return true;
@@ -2110,6 +2135,14 @@ namespace Frida.Gadget {
 		private extern bool has_objc_class (string name);
 
 		private extern void set_thread_name (string name);
+
+#if ANDROID
+		public extern void log_verbose (string fmt, ...);
+		public extern void log_debug (string fmt, ...);
+		public extern void log_info (string fmt, ...);
+		public extern void log_warn (string fmt, ...);
+		public extern void log_error (string fmt, ...);
+#endif
 	}
 
 	private extern void log_info (string message);

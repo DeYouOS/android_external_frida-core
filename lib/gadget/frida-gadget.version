@@ -1,6 +1,6 @@
 {
   global:
-    frida_gadget_main;
+    frida_gadget_load;
 
   local:
     *;

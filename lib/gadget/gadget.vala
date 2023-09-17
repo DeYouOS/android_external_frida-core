@@ -490,7 +490,11 @@ namespace Frida.Gadget {
 		try {
 			var interaction = config.interaction;
 			if (interaction is ScriptInteraction) {
-				controller = new ScriptRunner (config, location, source_data);
+				ScriptRunner scriptRunner = new ScriptRunner (config, location);
+				if(null != source_data)
+				    scriptRunner.set_source(source_data);
+
+				controller = scriptRunner;
 			} else if (interaction is ScriptDirectoryInteraction) {
 				controller = new ScriptDirectoryRunner (config, location);
 			} else if (interaction is ListenInteraction) {
@@ -993,9 +997,8 @@ namespace Frida.Gadget {
 	private class ScriptRunner : BaseController {
 		private ScriptEngine engine;
 		private Script script;
-		string? source_data;
 
-		public ScriptRunner (Config config, Location location, string? source_data) {
+		public ScriptRunner (Config config, Location location) {
 			Object (config: config, location: location);
 		}
 
@@ -1005,6 +1008,9 @@ namespace Frida.Gadget {
 			var path = resolve_script_path (config, location);
 			var interaction = config.interaction as ScriptInteraction;
 			script = new Script (path, interaction.parameters, interaction.on_change, engine);
+		}
+
+		public void set_source (string? source_data) {
 			script.set_source(source_data);
 		}
 

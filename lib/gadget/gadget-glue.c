@@ -79,7 +79,7 @@ frida_on_load (int argc, const char * argv[], const char * envp[], const char * 
 __attribute__ ((constructor)) static void
 frida_on_load (void)
 {
-  ALOGD("frida_on_load");
+  ALOGD("onload");
   // frida_gadget_load (NULL, NULL, NULL);
 }
 
@@ -93,7 +93,7 @@ frida_on_unload (void)
 
 #ifdef HAVE_ANDROID
 
-void frida_agent_environment_log_verbose (const gchar* fmt, ...) {
+void frida_gadget_environment_log_verbose (const gchar* fmt, ...) {
 
   va_list ap;
   va_start(ap, fmt);
@@ -101,7 +101,7 @@ void frida_agent_environment_log_verbose (const gchar* fmt, ...) {
   va_end(ap);
 }
 
-void frida_agent_environment_log_debug (const gchar* fmt, ...) {
+void frida_gadget_environment_log_debug (const gchar* fmt, ...) {
 
   va_list ap;
   va_start(ap, fmt);
@@ -109,7 +109,7 @@ void frida_agent_environment_log_debug (const gchar* fmt, ...) {
   va_end(ap);
 }
 
-void frida_agent_environment_log_info (const gchar* fmt, ...) {
+void frida_gadget_environment_log_info (const gchar* fmt, ...) {
 
   va_list ap;
   va_start(ap, fmt);
@@ -117,7 +117,7 @@ void frida_agent_environment_log_info (const gchar* fmt, ...) {
   va_end(ap);
 }
 
-void frida_agent_environment_log_warn (const gchar* fmt, ...) {
+void frida_gadget_environment_log_warn (const gchar* fmt, ...) {
 
   va_list ap;
   va_start(ap, fmt);
@@ -125,7 +125,7 @@ void frida_agent_environment_log_warn (const gchar* fmt, ...) {
   va_end(ap);
 }
 
-void frida_agent_environment_log_error (const gchar* fmt, ...) {
+void frida_gadget_environment_log_error (const gchar* fmt, ...) {
 
   va_list ap;
   va_start(ap, fmt);
